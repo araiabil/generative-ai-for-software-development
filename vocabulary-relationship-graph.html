@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GenAI Vocabulary and Report Relationships</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: #172033;
+    background: #f7f9fc;
+  }
+  h1 { margin-bottom: .3rem; }
+  .note { color: #48566d; line-height: 1.5; }
+  .panel {
+    background: white;
+    border: 1px solid #dce3ed;
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+  }
+  svg { min-width: 760px; width: 100%; height: auto; }
+  .edge { fill: none; opacity: .23; }
+  .edge.explicit { stroke: #2563eb; }
+  .edge.implicit { stroke: #ea580c; stroke-dasharray: 5 4; }
+  .edge.active { opacity: .9; stroke-width: 3; }
+  .term { cursor: pointer; }
+  .term:hover text, .term.selected text { font-weight: bold; }
+  .section-node { fill: #e8efff; stroke: #7da2e8; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; }
+  th, td { border-bottom: 1px solid #e2e8f0; padding: .55rem; text-align: left; }
+  th { background: #f0f4fa; }
+  td:not(:first-child), th:not(:first-child) { text-align: center; }
+  .e { color: #1d4ed8; font-weight: 600; }
+  .i { color: #c2410c; font-weight: 600; }
+  li { margin: .45rem 0; }
+  code { background: #eef2f7; padding: .1rem .25rem; }
+</style>
+</head>
+<body>
+
+<h1>Vocabulary ↔ Report Relationship Graph</h1>
+<p class="note">
+  Click or hover over a vocabulary term to highlight its connections.
+  Blue solid lines represent explicit mentions; orange dashed lines represent
+  implicit references. The table gives the separate counts.
+</p>
+
+<div class="panel">
+  <svg id="graph" viewBox="0 0 1000 760"
+       role="img" aria-label="Vocabulary terms connected to report sections"></svg>
+</div>
+
+<div class="panel">
+  <h2>Frequency table</h2>
+  <p class="note">
+    Each cell shows <span class="e">explicit</span> /
+    <span class="i">implicit</span>. A dash means zero.
+  </p>
+  <table id="counts"></table>
+</div>
+
+<div class="panel">
+  <h2>Counting method</h2>
+  <ul>
+    <li>
+      <strong>Unit:</strong> individual mentions within the report, including
+      its title, headings, and implementation lists.
+    </li>
+    <li>
+      <strong>Explicit:</strong> the vocabulary term, its stated abbreviation,
+      or a normal grammatical form. For example, “LLMs,” “RAG,”
+      “embeddings,” and “grounded” count. “Generative Artificial Intelligence
+      (GenAI)” counts once, not twice.
+    </li>
+    <li>
+      <strong>Implicit:</strong> a manually identified passage describing the
+      concept without naming the vocabulary term. Implicit counts are
+      interpretive, not keyword-search results; another reviewer may classify
+      borderline passages differently.
+    </li>
+    <li>
+      An implicit reference is not also counted as explicit for the same term
+      in the same passage. Different terms can be counted in the same passage.
+    </li>
+    <li>
+      The four areas are the introduction (including the report title),
+      software engineering, enterprise knowledge management, and customer
+      support and operations.
+    </li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h2>Implicit-reference evidence</h2>
+  <ul>
+    <li><strong>Semantic search — knowledge management (3):</strong>
+      a query converted to an embedding and matched against documents;
+      “semantic vector search”; and vector databases used for “similarity
+      search.” These describe meaning-based or vector-similarity retrieval
+      without using the exact phrase “semantic search.”</li>
+    <li><strong>Tool calling — customer support (2):</strong>
+      agents executing backend actions through “tool-use APIs”; and
+      “executing external API calls securely.”</li>
+    <li><strong>AI agent — customer support (2):</strong>
+      “an agent” misinterpreting an input and taking subsequent automated
+      actions; and Intercom Fin described as an autonomous “AI customer
+      service agent.”</li>
+    <li><strong>Evaluation — software engineering (1):</strong>
+      “automated verification” using test runners and linters. This is a
+      related check on generated code, rather than a formal evaluation of the
+      entire AI application.</li>
+  </ul>
+  <p class="note">
+    Zero does not prove a concept is absent in every possible interpretation.
+    In particular, training, security, and retrieval references were not
+    automatically treated as fine-tuning, guardrails, or RAG.
+  </p>
+</div>
+
+<script>
+const sections = [
+  "Introduction",
+  "Software engineering",
+  "Knowledge management",
+  "Customer support"
+];
+
+// Each pair is [explicit, implicit], in the section order above.
+const data = [
+  ["Generative AI (GenAI)",            [[3,0],[3,0],[0,0],[0,0]]],
+  ["Large language model (LLM)",       [[0,0],[3,0],[3,0],[0,0]]],
+  ["Token",                            [[0,0],[0,0],[2,0],[0,0]]],
+  ["Context window",                   [[0,0],[2,0],[1,0],[0,0]]],
+  ["Prompt",                           [[0,0],[1,0],[1,0],[1,0]]],
+  ["System instruction",               [[0,0],[0,0],[0,0],[0,0]]],
+  ["Inference",                        [[0,0],[1,0],[0,0],[1,0]]],
+  ["Temperature",                      [[0,0],[0,0],[0,0],[0,0]]],
+  ["Embedding",                        [[0,0],[0,0],[4,0],[0,0]]],
+  ["Vector database",                  [[0,0],[0,0],[2,0],[0,0]]],
+  ["Semantic search",                  [[0,0],[0,0],[0,3],[0,0]]],
+  ["Retrieval-augmented generation (RAG)",
+                                       [[0,0],[0,0],[4,0],[0,0]]],
+  ["Grounding",                        [[0,0],[0,0],[2,0],[0,0]]],
+  ["Hallucination",                    [[0,0],[1,0],[1,0],[0,0]]],
+  ["Fine-tuning",                      [[0,0],[0,0],[0,0],[0,0]]],
+  ["Tool calling",                     [[0,0],[0,0],[0,0],[0,2]]],
+  ["AI agent",                         [[0,0],[0,0],[0,0],[4,2]]],
+  ["Guardrail",                        [[0,0],[0,0],[0,0],[1,0]]],
+  ["Prompt injection",                 [[0,0],[0,0],[0,0],[1,0]]],
+  ["Evaluation",                       [[0,0],[0,1],[0,0],[0,0]]]
+];
+
+const svg = document.getElementById("graph");
+const ns = "http://www.w3.org/2000/svg";
+
+function element(name, attrs, text) {
+  const node = document.createElementNS(ns, name);
+  Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+const sectionY = [90, 260, 440, 620];
+
+// Draw edges behind nodes.
+data.forEach(([term, values], row) => {
+  const y = 35 + row * 36;
+  values.forEach(([explicit, implicit], col) => {
+    [
+      [explicit, "explicit", -2],
+      [implicit, "implicit", 2]
+    ].forEach(([count, kind, offset]) => {
+      if (!count) return;
+      const path = element("path", {
+        d: `M 360 ${y + offset} C 520 ${y + offset}, 620 ${sectionY[col]}, 755 ${sectionY[col]}`,
+        class: `edge ${kind}`,
+        "data-row": row,
+        "stroke-width": Math.min(1 + count * 0.6, 4)
+      });
+      path.appendChild(element("title", {},
+        `${term} → ${sections[col]}: ${count} ${kind}`));
+      svg.appendChild(path);
+    });
+  });
+});
+
+// Section nodes.
+sections.forEach((section, col) => {
+  svg.appendChild(element("rect", {
+    x: 755, y: sectionY[col] - 24, width: 225, height: 48,
+    rx: 10, class: "section-node"
+  }));
+  svg.appendChild(element("text", {
+    x: 867, y: sectionY[col] + 5,
+    "text-anchor": "middle", "font-size": 15
+  }, section));
+});
+
+// Vocabulary nodes.
+data.forEach(([term], row) => {
+  const y = 35 + row * 36;
+  const group = element("g", {
+    class: "term",
+    tabindex: 0,
+    role: "button",
+    "aria-label": `Highlight ${term}`
+  });
+  group.appendChild(element("circle", {cx: 350, cy: y, r: 5, fill: "#475569"}));
+  group.appendChild(element("text", {
+    x: 335, y: y + 5, "text-anchor": "end", "font-size": 14
+  }, term));
+
+  function highlight() {
+    document.querySelectorAll(".edge").forEach(edge =>
+      edge.classList.toggle("active", Number(edge.dataset.row) === row));
+    document.querySelectorAll(".term").forEach(node =>
+      node.classList.toggle("selected", node === group));
+  }
+  group.addEventListener("mouseenter", highlight);
+  group.addEventListener("focus", highlight);
+  group.addEventListener("click", highlight);
+  svg.appendChild(group);
+});
+
+// Frequency table.
+const table = document.getElementById("counts");
+const head = document.createElement("thead");
+head.innerHTML = "<tr><th>Vocabulary term</th>" +
+  sections.map(s => `<th>${s}</th>`).join("") +
+  "<th>Total</th></tr>";
+table.appendChild(head);
+
+const body = document.createElement("tbody");
+function pair(e, i) {
+  return `<span class="e">${e || "–"}</span> / ` +
+         `<span class="i">${i || "–"}</span>`;
+}
+data.forEach(([term, values]) => {
+  const tr = document.createElement("tr");
+  const totals = values.reduce((a, v) => [a[0] + v[0], a[1] + v[1]], [0, 0]);
+  tr.innerHTML = `<td>${term}</td>` +
+    values.map(v => `<td>${pair(v[0], v[1])}</td>`).join("") +
+    `<td>${pair(totals[0], totals[1])}</td>`;
+  body.appendChild(tr);
+});
+table.appendChild(body);
+</script>
+</body>
+</html>
